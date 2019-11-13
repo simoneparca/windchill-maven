@@ -4,25 +4,105 @@
 	<title>Setup Windchill Development using Maven</title>
 </head>
 <body>  
-<h1>Setup Windchill Development using Maven</h1>
+<h1>Setup <a href="http://www.ptc.com/product-lifecycle-management/windchill">PTC Windchill</a>
+ Development using <a class="reference external" href="https://maven.apache.org/">Maven</a></h1>
 <div class="section" id="disclaimer">
 	<h2>Disclaimer</h2>
-	<p>This documentation is based on the <a href="http://www.ekito.fr/people/windchill-tips-building-project-maven/">work</a> of <a href="http://www.ekito.fr/people/author/jboulay/">Julien Boulay</a>, no more available online.</p>
+	<p>This documentation is based on the work of <a href="http://www.ekito.fr/people/author/jboulay/">Julien Boulay</a>,
+	published on <cite>http://www.ekito.fr/people/windchill-tips-building-project-maven</cite> (no more available online)
+	and Stefan Eletzhofer from Nexiles.
+	<a href="mailto:info@nexiles.com?cc=se@nexiles.de&subject=Windchill maven setup request for information">(contacts)</a>
+	<br>The project review is work in progress at the moment. There' <!--&#8217;-->s much more included in this repo; most of I don't understand yet. Below is
+	what I understood so far. If you have any comments or help, please <a href="https://www.linkedin.com/in/simone-parca-62aa6a17/">contact me</a>.</p>
+	</p>
 </div>
 <h2>Contents</h2>
+<h3>Setup</h3>
+<h3>Abstract</h3>
+<p>Here we show how to set up Windchill artifacts for Maven such that we later can depend on
+these artifacts in our projects. This is not a introduction to Maven, please see the documentation on the <a href="https://maven.apache.org/">maven website</a> for more.</p>
+<h3>Prerequisites</h3>
+<p>You need to have the needed tools installed:</p>
 <ul>
-	<li><a href="introduction.html">Introduction</a>
-		<ul>
-			<li><a href="introduction.html#problem-statement">Problem Statement</a>
-			<li><a href="introduction.html#goals">Goals</a>
-		</ul>
-	<li><a class="reference internal" href="setup.html">Setup</a>
-		<ul>
-			<li><a href="setup.html#abstract">Abstract</a>
-			<li><a href="setup.html#prerequisites">Prerequisites</a>
-			<li><a href="setup.html#tl-dr">TL;DR</a>
-			<li><a href="setup.html#creating-windchill-artifacts">Creating Windchill Artifacts</a>
-		</ul>
-	</ul>
+<li>A JDK for Windchill development</li>
+<li>ant and maven</li>
+</ul>
+<p>On a Mac, this is done by:</p>
+<pre>
+$ brew cask install java
+$ brew install ant maven
+</pre>
+<h3>TL;DR</h3>
+<p>On a Mac:</p>
+<pre>
+$ cd windchill-maven
+$ virtualenv .
+$ . ./bin/activate
+$ . ./setenv.sh
+$ pip install -r requirements.txt
+$ fab make:version=MAJOR.MINOR.PATCH.FOO
+</pre>
+<p>Where <cite>MAJOR.MINOR.PATCH.FOO</cite> is the actual Windchill version, e.g:</p>
+<pre>
+$ fab make:version=10.2.20.00
+</pre>
+<p>This currently creates and imports the artifacts.</p>
+<h3>Creating Windchill Artifacts</h3>
+<p>This step is a <strong>one time</strong> setup task.</p>
+<p>To depend on Windchill code in our project, most developers used to create a <em>jar file</em> out of the code base found in
+Windchill. I use a different approach: all classes provided in codebase are also included in some jars, you only need to include the right set of already existing jar files.
+<p>To be able to compile, we need to create these artifacts:</p>
+<ul>
+<li>The <em>codebase</em> &#8211; using ant to create a jar file from the Windchill code base</li>
+<li>The <em>annotations</em> &#8211; this is in <cite>$WT_HOME/srclib/tools/Annotations.jar</cite></li>
+<li>The <em>ie3rdpartylibs</em> &#8211; this is located at <cite>$WT_HOME/codebase/WEB-INF/lib/ie3rdpartylibs.jar</cite></li>
+</ul>
+<div class="section" id="windchill-version">
+<h4>Windchill Version</h4>
+<p>You need to obtain the Windchill version to import the artifacts using the correct Windchill version. This
+is done by issuing <code>windchill version</code> in a windchill shell <strong>on the server</strong>. A example output is below:</p>
+<pre>
+$ windchill version
+      Timestamp: Juli 03, 2015 - 12:54:14 (GMT: 03.07.2015 10:54:14)
+
+      Support   Support                                  Installer
+      Datecode  Release Number  Release Id               Sequence   Display Label
+  --  --------  --------------  ---------------          ---------  ---------------------
+      F000      10.2            pdml.10.2.0.00.62        01         PTC Windchill PDMLink 10.2
+      M020      10.2            wsp.10.2.20.00.28        04         PTC Windchill 10.2 Service Pack
+      M020      10.2            whc.10.2.20.00.28        02         PTC Windchill 10.2 Help Center
+      M020      10.2            ie.10.2.20.00.28         01         PTC Windchill 10.2 Info*Engine
+      M020      10.2            commonpdm.10.2.20.00.28  03         PTC Windchill 10.2 Common Base
+      M020      10.2            wlp.10.2.20.00.28        01         PTC Windchill 10.2 MultiLanguage Pack
+      M020      10.2            wnc.10.2.20.00.28        05         PTC Windchill 10.2 Services
+
+  There are no patches installed.
+
+  Non-Default Locale Support:
+  Code  Name
+  ----  ----
+  de
+</pre>
+<p>The version used below for this example would be <strong>10.2.0.00</strong>.</p>
+<h4>Preparing artifacts</h4>
+<p>So, to prepare the files for import into the maven repository, do:</p>
+<pre>
+$ cd windchill-maven
+$ export WT_HOME=/Volumes/whereever-your-windchill-home-is
+$ ant makeCodebaseJar
+$ cp $WT_HOME/srclib/tools/Annotations.jar .
+$ cp $WT_HOME/codebase/WEB-INF/lib/ie3rdpartylibs.jar .
+</pre>
+
+<div>
+<h4>Import the artifacts to the <em>local</em> maven repository</h4>
+<p>To import the artifacts, do:</p>
+<pre>
+$ cd windchill-maven
+$ export WTVERSION=10.2.0.00
+$ mvn install:install-file -Dfile=codebase.jar -DgroupId=com.ptc -DartifactId=codebase -Dversion=$WTVERSION -Dpackaging=jar -DgeneratePom=true -DcreateChecksum=true
+$ mvn install:install-file -Dfile=Annotations.jar -DgroupId=com.ptc -DartifactId=Annotations -Dversion=$WTVERSION -Dpackaging=jar -DgeneratePom=true -DcreateChecksum=true
+$ mvn install:install-file -Dfile=ie3rdpartylibs.jar -DgroupId=com.ptc -DartifactId=ie3rdpartylibs -Dversion=$WTVERSION -Dpackaging=jar -DgeneratePom=true -DcreateChecksum=true
+</pre>
 </body>
 </html>
